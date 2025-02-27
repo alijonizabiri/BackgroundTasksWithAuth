@@ -21,6 +21,7 @@ builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("Default")));
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<MyHangfireService>();
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 try

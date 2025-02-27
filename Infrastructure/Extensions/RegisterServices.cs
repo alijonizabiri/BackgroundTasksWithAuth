@@ -20,5 +20,6 @@ public static class RegisterServices
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IMemoryCacheService, MemoryCacheService>();
     }
 }

@@ -7,26 +7,35 @@ using Infrastructure.Responses;
 
 namespace Infrastructure.Services;
 
-public class CategoryService(ICategoryRepository categoryRepository) : ICategoryService
+public class CategoryService(ICategoryRepository categoryRepository, IMemoryCacheService memoryCacheService) : ICategoryService
 {
     public async Task<PaginationResponse<List<GetCategoryDto>>> GetAll(CategoryFilter filter)
     {
-        var categories = await categoryRepository.GetAll(filter);
+        const string cacheKey = "categories";
 
-        var totalRecords = categories.Count;
-        var data = categories
+        var allCategories = await memoryCacheService.GetData<List<GetCategoryDto>>(cacheKey);
+
+        if (allCategories == null)
+        {
+            var categories = await categoryRepository.GetAll(filter);
+
+            allCategories = categories.Select(c => new GetCategoryDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Description = c.Description
+            }).ToList();
+            
+            await memoryCacheService.SetData(cacheKey, allCategories, 3);
+        }
+        
+        var totalRecords = allCategories.Count;
+        var paginatedData = allCategories
             .Skip((filter.PageNumber - 1) * filter.PageSize)
             .Take(filter.PageSize)
             .ToList();
 
-        var result = data.Select(c => new GetCategoryDto()
-        {
-            Id = c.Id,
-            Name = c.Name,
-            Description = c.Description
-        }).ToList();
-
-        return new PaginationResponse<List<GetCategoryDto>>(result, totalRecords, filter.PageNumber, filter.PageSize);
+        return new PaginationResponse<List<GetCategoryDto>>(paginatedData, totalRecords, filter.PageNumber, filter.PageSize);
     }
 
     public async Task<Response<string>> CreateCategory(AddCategoryDto request)
@@ -39,9 +48,11 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
 
         var result = await categoryRepository.CreateCategory(category);
 
-        return result == 1
-            ? new Response<string>("Success")
-            : new Response<string>(HttpStatusCode.BadRequest, "Failed");
+        if (result != 1) return new Response<string>(HttpStatusCode.BadRequest, "Failed");
+        
+        await memoryCacheService.DeleteData("categories"); 
+        return new Response<string>("Success");
+
     }
 
     public async Task<Response<string>> UpdateCategory(UpdateCategoryDto request)
@@ -57,9 +68,11 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
         category.Description = request.Description;
 
         var result = await categoryRepository.UpdateCategory(category);
-        return result == 1
-            ? new Response<string>("Success")
-            : new Response<string>(HttpStatusCode.BadRequest, "Failed");
+        
+        if (result != 1) return new Response<string>(HttpStatusCode.BadRequest, "Failed");
+        
+        await memoryCacheService.DeleteData("categories"); 
+        return new Response<string>("Success");
     }
 
     public async Task<Response<string>> DeleteCategory(int id)
@@ -71,8 +84,10 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
         }
 
         var result = await categoryRepository.DeleteCategory(category);
-        return result == 1
-            ? new Response<string>("Success")
-            : new Response<string>(HttpStatusCode.BadRequest, "Failed");
+        
+        if (result != 1) return new Response<string>(HttpStatusCode.BadRequest, "Failed");
+        
+        await memoryCacheService.DeleteData("categories"); 
+        return new Response<string>("Success");
     }
 }
