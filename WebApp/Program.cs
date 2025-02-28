@@ -23,6 +23,12 @@ builder.Services.AddHangfireServer();
 builder.Services.AddScoped<MyHangfireService>();
 builder.Services.AddMemoryCache();
 
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("RedisCache"); 
+    options.InstanceName = "Pizza_"; 
+});
+
 var app = builder.Build();
 try
 {

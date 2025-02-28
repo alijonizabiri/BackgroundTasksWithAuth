@@ -21,5 +21,6 @@ public static class RegisterServices
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IMemoryCacheService, MemoryCacheService>();
+        services.AddScoped<IRedisCacheService, RedisCacheService>();
     }
 }
